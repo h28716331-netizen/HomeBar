@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 主指示条 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M39,50 H69 A3.5,3.5 0 0 1 72.5,53.5 A3.5,3.5 0 0 1 69,57 H39 A3.5,3.5 0 0 1 35.5,53.5 A3.5,3.5 0 0 1 39,50 Z" />
+
+    <!-- 向上轻弹的轨迹暗示 -->
+    <path
+        android:fillColor="#7A8CA8"
+        android:pathData="M54,41 L59,47 H56.5 V49 H51.5 V47 H49 Z" />
+
+    <!-- 底部渐隐的短条 -->
+    <path
+        android:fillColor="#59FFFFFF"
+        android:pathData="M44,64 H64 A2,2 0 0 1 66,66 A2,2 0 0 1 64,68 H44 A2,2 0 0 1 42,66 A2,2 0 0 1 44,64 Z" />
+</vector>

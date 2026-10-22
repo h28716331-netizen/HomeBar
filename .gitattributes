@@ -1,0 +1,10 @@
+# Normalise line endings so the repo is consistent across platforms
+* text=auto eol=lf
+
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+gradlew text eol=lf
+
+*.jar  binary
+*.png  binary
+*.apk  binary

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      本应用不需要任何危险权限：
+      · 悬浮窗走「无障碍悬浮层」(TYPE_ACCESSIBILITY_OVERLAY)，无需 SYSTEM_ALERT_WINDOW
+      · 不申请任何输入注入能力，不注入手势、不修改系统动画缩放
+      · 不声明任何触摸事件来源（setMotionEventSources），因此绝不会抢走系统触摸
+
+      POST_NOTIFICATIONS 仅用于常驻通知里的「暂停 / 彻底关闭」按钮 ——
+      这是出问题时的紧急出口。用户不授予也不影响主功能。
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      Android 11 起默认收紧包可见性：不声明的话，
+      queryIntentActivities(CATEGORY_HOME) 会返回空列表，「桌面隐藏」就永远不生效。
+      这里只是可见性声明，不申请任何权限，也不涉及读取窗口内容。
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
+        android:theme="@style/Theme.HomeBar"
+        tools:targetApi="36">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|density"
+            android:theme="@style/Theme.HomeBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          只做三件事：
+          1) 订阅无障碍「触摸交互开始/结束」事件（纯订阅，无法拦截输入）
+          2) 画一根悬浮指示条（FLAG_NOT_TOUCHABLE，永不接收触摸）
+          3) 挂一个 1×1 像素的坐标探测窗口（最多只影响 1 个像素）
+
+          v1.0.0 曾用 setMotionEventSources(SOURCE_TOUCHSCREEN) 想「被动观察」触摸，
+          实际会把触摸事件从输入链路摘走，导致整块屏幕失灵，v1.1.0 已彻底移除。
+        -->
+        <service
+            android:name=".service.HomeBarAccessibilityService"
+            android:exported="true"
+            android:label="@string/service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+    </application>
+
+</manifest>

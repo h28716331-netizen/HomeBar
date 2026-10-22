@@ -1,0 +1,2 @@
+-keep class com.homebar.service.** { *; }
+-keepclassmembers class com.homebar.core.BarConfig { *; }

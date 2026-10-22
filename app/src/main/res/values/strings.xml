@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">小白条</string>
+    <string name="service_label">小白条 · 手势指示条</string>
+    <string name="service_summary">在屏幕底部绘制一根可自定义的指示条（绝不拦截触摸与手势）</string>
+    <string name="service_description">在屏幕最底部叠加一根悬浮指示条，并自动适应背景明暗切换黑白。本服务不申请任何触摸探索、不声明任何触摸事件来源，悬浮层永久不可触摸，因此返回手势、上滑回桌面与系统动画完全不受影响。</string>
+
+    <string name="notif_channel_name">运行状态</string>
+    <string name="notif_channel_desc">显示小白条的运行状态，并提供一键暂停与关闭</string>
+    <string name="notif_title_running">小白条运行中</string>
+    <string name="notif_text_running">点「暂停」可立即收起指示条，无需去系统设置里关服务</string>
+    <string name="notif_title_paused">小白条已暂停</string>
+    <string name="notif_text_paused">指示条与触摸探测均已撤下，点「继续」恢复</string>
+    <string name="notif_pause">暂停</string>
+    <string name="notif_resume">继续</string>
+    <string name="notif_stop">彻底关闭</string>
+</resources>

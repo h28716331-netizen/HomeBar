@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⚠️⚠️ 安全红线（v1.1.0 修复说明）⚠️⚠️
+
+  1.0.0 版本在服务里调用了 AccessibilityServiceInfo.setMotionEventSources(SOURCE_TOUCHSCREEN)，
+  想「被动观察」触摸坐标。这是一个致命误解：官方文档明确写着
+
+      "MotionEvents from sources in getMotionEventSources()
+       are not sent to the rest of the system."
+
+  也就是说，一旦声明了某个 motion event source，来自该来源的事件会被【从输入链路里摘走】，
+  不再送给 SystemUI / Launcher / 任何应用。结果是整块屏幕的触摸全部失灵 —— 这正是
+  1.0.0 装上后「手势失效、屏幕近乎失控」的根因。
+
+  本文件因此做了三件事：
+    · 不再声明 canRequestTouchExplorationMode（不需要，也避免任何触摸探索的可能）
+    · 不再声明 canRetrieveWindowContent（不需要，缩小权限面）
+    · 代码里【永久删除】setMotionEventSources 与 onMotionEvent 覆写
+
+  触摸感知改用两条【绝对不可能拦截输入】的路径，见 HomeBarAccessibilityService：
+    A. 订阅无障碍 TYPE_TOUCH_INTERACTION_START / END 事件（纯事件订阅，只能「知道」不能「拦截」）
+    B. 一个 1×1 像素的坐标探测窗口（见 TouchProbe），最多只会吃掉一个像素的触摸
+
+  canTakeScreenshot 保留：用于采样背景亮度实现自动黑白，只在指示条可见时按间隔调用。
+
+  ── v1.3.0 新增：通知中心 / 控制中心隐藏 ──
+  通知栏是 SystemUI 的 TYPE_SYSTEM 窗口，不是 Activity，
+  下拉时【不一定】触发 TYPE_WINDOW_STATE_CHANGED，所以不能只靠包名判断。
+  因此额外声明：
+    · accessibilityEventTypes += typeWindowsChanged
+    · accessibilityFlags     += flagRetrieveInteractiveWindows
+  用 getWindows() 读取「窗口类型 + 屏幕位置」来判断通知栏是否展开。
+
+  ⚠️ 仍然【不声明】canRetrieveWindowContent —— 只拿窗口元数据
+  （类型、bounds、层级），不读取窗口里的任何内容，也不会弹「可查看屏幕内容」的授权提示。
+
+  ── v1.4.0 补充 ──
+  这份 XML 只在【用户打开服务的那一刻】被系统读取并缓存，之后升级 APK 不会重新读。
+  从 1.2.0 直接升上来的用户，缓存里既没有 typeWindowsChanged 也没有
+  flagRetrieveInteractiveWindows，getWindows() 于是永远返回空 —— 面板展开时
+  小白条不消失。因此 HomeBarAccessibilityService.onServiceConnected() 里会再
+  用 setServiceInfo() 把这些标志位强制补一遍，用户不必去设置里关掉再打开。
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeTouchInteractionStart|typeTouchInteractionEnd|typeWindowStateChanged|typeWindowsChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows"
+    android:canTakeScreenshot="true"
+    android:notificationTimeout="100"
+    android:description="@string/service_description"
+    android:summary="@string/service_summary" />
