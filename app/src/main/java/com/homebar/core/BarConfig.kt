@@ -105,6 +105,19 @@ data class BarConfig(
      * 状态栏只有几十 dp、导航栏只有底部一条，都不会误判。
      */
     val hideOnShade: Boolean = true,
+    /**
+     * 锁屏隐藏：熄屏、锁屏界面、以及锁屏上的通知 / 快捷面板上都不显示。
+     *
+     * 判定用的是 KeyguardManager.isKeyguardLocked()，**不需要任何权限**。
+     * 时机由三个系统广播驱动：
+     *   · ACTION_SCREEN_OFF  → 立即视为锁定（同时避免条出现在 AOD 息屏显示上）
+     *   · ACTION_SCREEN_ON   → 问一次 KeyguardManager，决定显不显示
+     *   · ACTION_USER_PRESENT → 用户真正解锁，恢复显示
+     *
+     * 为什么不能只看 SCREEN_ON：很多 ROM 亮屏后停在锁屏界面，
+     * 此时屏幕是「亮着」的，但用户还没解锁。
+     */
+    val hideOnLockScreen: Boolean = true,
 
     // ── 出现 / 消失动画 ───────────────────────────────────
     val showDurationMs: Long = 300L,

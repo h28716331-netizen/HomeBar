@@ -16,8 +16,8 @@ android {
         applicationId = "com.homebar"
         minSdk = 30
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.6.0"
+        versionCode = 9
+        versionName = "1.7.0"
         resourceConfigurations += listOf("zh", "en")
     }
 

@@ -55,6 +55,7 @@ class BarPrefs(context: Context) {
             wakeDelayMs = sp.getLong(K_WAKE_DELAY, d.wakeDelayMs),
             hideOnHome = sp.getBoolean(K_HIDE_ON_HOME, d.hideOnHome),
             hideOnShade = sp.getBoolean(K_HIDE_ON_SHADE, d.hideOnShade),
+            hideOnLockScreen = sp.getBoolean(K_HIDE_ON_LOCK, d.hideOnLockScreen),
 
             showDurationMs = sp.getLong(K_SHOW_DURATION, d.showDurationMs),
             hideDurationMs = sp.getLong(K_HIDE_DURATION, d.hideDurationMs),
@@ -104,6 +105,7 @@ class BarPrefs(context: Context) {
             .putLong(K_WAKE_DELAY, cfg.wakeDelayMs)
             .putBoolean(K_HIDE_ON_HOME, cfg.hideOnHome)
             .putBoolean(K_HIDE_ON_SHADE, cfg.hideOnShade)
+            .putBoolean(K_HIDE_ON_LOCK, cfg.hideOnLockScreen)
 
             .putLong(K_SHOW_DURATION, cfg.showDurationMs)
             .putLong(K_HIDE_DURATION, cfg.hideDurationMs)
@@ -181,6 +183,7 @@ class BarPrefs(context: Context) {
         private const val K_WAKE_DELAY = "wake_delay"
         private const val K_HIDE_ON_HOME = "hide_on_home"
         private const val K_HIDE_ON_SHADE = "hide_on_shade"
+        private const val K_HIDE_ON_LOCK = "hide_on_lock_screen"
         private const val K_PAUSED = "paused"
 
         private const val K_SHOW_DURATION = "show_duration"

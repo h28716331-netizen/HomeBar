@@ -418,13 +418,23 @@ fun HomeBarApp() {
                         checked = cfg.hideOnShade,
                         onCheckedChange = { set(cfg.copy(hideOnShade = it)) },
                     )
-                    if (cfg.hideOnHome || cfg.hideOnShade) {
+                    SwitchRow(
+                        title = "锁屏",
+                        subtitle = "熄屏、锁屏界面、锁屏上的通知面板都不显示，解锁后自动淡入。" +
+                            "靠 KeyguardManager 判断，不需要任何权限，也读不到任何内容",
+                        checked = cfg.hideOnLockScreen,
+                        onCheckedChange = { set(cfg.copy(hideOnLockScreen = it)) },
+                    )
+                    if (cfg.hideOnHome || cfg.hideOnShade || cfg.hideOnLockScreen) {
                         HintText(
-                            "两条判定都不申请「使用情况访问」权限，也不读取窗口内容：\n" +
+                            "三条判定都不申请「使用情况访问」权限，也不读取窗口内容：\n" +
                                 "· 桌面 / 最近任务：看 TYPE_WINDOW_STATE_CHANGED 事件里自带的包名\n" +
                                 "· 通知中心 / 控制中心：看窗口列表里有没有铺满屏幕、或者拿到了输入焦点的" +
                                 "系统面板窗口（状态栏、导航栏都不可聚焦，不会误判），" +
                                 "同时每 250ms 主动复查一次，避免个别 ROM 不派发窗口事件\n" +
+                                "· 锁屏：熄屏时直接视为锁定，亮屏时问一次 KeyguardManager，" +
+                                "收到「用户已解锁」广播才恢复 —— 亮屏不等于解锁，" +
+                                "很多 ROM 亮屏后停在锁屏界面\n" +
                                 "个别 ROM 若限制包可见性，桌面判定会自动失效 —— " +
                                 "宁可不隐藏，也不会在应用里乱隐藏。"
                         )

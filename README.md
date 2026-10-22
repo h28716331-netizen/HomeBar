@@ -85,6 +85,7 @@ Installing v1.1.0 or later over the top also fixes it; uninstalling first is not
 | **Gesture guard** | Swipe-up-to-home does not flash the bar. Wake is delayed and cancellable, delay configurable |
 | **Hide on home & recents** | Collapses on the launcher and in recents, fades in inside any app |
 | **Hide on notification shade & quick settings** | Collapses when the shade or control centre expands, fades back on dismiss |
+| **Hide on lock screen** | Not drawn while the screen is off, on the keyguard, or on notification panels over the keyguard. Fades in once you actually unlock |
 | **Tap bounce** | Tap the bar itself and it springs up and settles back. Amplitude, duration, and easing are all adjustable |
 | **Easing curves** | Linear, decelerate, accelerate, ease-in-out, back, anticipate, spring (damped), bounce, custom cubic Bézier — with a live curve plot in the settings UI |
 | **Show / hide animation** | Independent duration and curve, plus optional scale and slide transitions |
@@ -211,7 +212,23 @@ accessibility configuration is read and cached **when the service is enabled**. 
 the APK does not re-read it, so a user upgrading from an older build would have no
 `flagRetrieveInteractiveWindows` in the cache and `getWindows()` would return empty forever.
 
+### Lock screen
+
+Three system broadcasts drive it; nothing is polled.
+
+| Broadcast | Action |
+|---|---|
+| `ACTION_SCREEN_OFF` | Treat as locked immediately — also keeps the bar off the always-on display |
+| `ACTION_SCREEN_ON` | Ask `KeyguardManager.isKeyguardLocked()` once |
+| `ACTION_USER_PRESENT` | The user actually unlocked — restore |
+
+The distinction between the last two matters: **screen on is not the same as unlocked.**
+Many ROMs wake to the keyguard and sit there, screen lit, waiting for a fingerprint or PIN.
+`isKeyguardLocked()` needs no permission, shows no consent dialog, and reveals nothing
+beyond "is the keyguard covering the screen right now".
+
 ### Deliberately avoided
+
 
 | Approach | Why not |
 |---|---|

@@ -6,6 +6,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -76,6 +77,23 @@ class HomeBarAccessibilityService : AccessibilityService() {
 
     /** 屏幕是否亮着（灭屏时没必要继续查窗口） */
     private var screenInteractive = true
+
+    // ── 锁屏隐藏 ──────────────────────────────────────────────
+    /**
+     * 当前是否处于锁屏（含熄屏、锁屏界面、锁屏上的通知面板）。
+     *
+     * 只在三个时机更新，不做轮询：
+     *   · 熄屏          → true（同时把条从 AOD 息屏显示上撤掉）
+     *   · 亮屏          → 问 KeyguardManager 一次
+     *   · 用户真正解锁  → false
+     */
+    private var locked = false
+
+    /** 懒加载，避免服务启动时就去拿系统服务 */
+    private val keyguard: KeyguardManager?
+        get() = runCatching {
+            getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        }.getOrNull()
 
     /** 上一次窗口检测的时间戳（用 uptimeMillis，不受系统改时间影响） */
     private var lastShadeCheckAt = 0L
@@ -234,12 +252,17 @@ class HomeBarAccessibilityService : AccessibilityService() {
         // 否则在通知栏里点「恢复运行」会先闪一下条再收起。
         evaluateShade(force = true)
 
+        // 服务可能是在锁屏状态下被启用的（比如重启后），先问一次真实锁屏状态
+        locked = runCatching { keyguard?.isKeyguardLocked == true }.getOrDefault(false)
+
         // 指示条
         val c = controller ?: BarOverlayController(this, cfg).also { controller = it }
         c.onConfigChanged(cfg)
         // 先设定抑制态再挂窗口，避免「先显示一下再消失」的闪烁
         c.setSuppressed(
-            (cfg.hideOnHome && onHome) || (cfg.hideOnShade && shadeExpanded)
+            (cfg.hideOnHome && onHome) ||
+                (cfg.hideOnShade && shadeExpanded) ||
+                (cfg.hideOnLockScreen && locked)
         )
         c.attach()
 
@@ -521,11 +544,25 @@ class HomeBarAccessibilityService : AccessibilityService() {
     private fun isSystemUiPackage(pkg: String): Boolean =
         SYSTEM_UI_PACKAGES.any { pkg.equals(it, ignoreCase = true) }
 
-    /** 综合「桌面」与「通知栏」两个条件，决定指示条是否收起 */
+    /** 综合「桌面」「通知栏」「锁屏」三个条件，决定指示条是否收起 */
     private fun applySuppression() {
         val cfg = prefs.load()
-        val shouldHide = (cfg.hideOnHome && onHome) || (cfg.hideOnShade && shadeExpanded)
+        val shouldHide =
+            (cfg.hideOnHome && onHome) ||
+                (cfg.hideOnShade && shadeExpanded) ||
+                (cfg.hideOnLockScreen && locked)
         controller?.setSuppressed(shouldHide)
+    }
+
+    /**
+     * 重新问一次系统「现在锁没锁」，然后刷新抑制态。
+     *
+     * KeyguardManager.isKeyguardLocked() 不需要任何权限，也不弹授权框，
+     * 只回答「锁屏界面现在是否盖在屏幕上」，读不到任何内容。
+     */
+    private fun refreshLockState() {
+        locked = runCatching { keyguard?.isKeyguardLocked == true }.getOrDefault(locked)
+        applySuppression()
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -654,17 +691,29 @@ class HomeBarAccessibilityService : AccessibilityService() {
                 when (intent?.action) {
                     Intent.ACTION_SCREEN_OFF -> {
                         screenInteractive = false
+                        // 熄屏即视为锁定：既避免条出现在 AOD 息屏显示上，
+                        // 也保证下次亮屏时先按「锁着」处理，不会闪一下再收回去。
+                        locked = true
                         stopShadeWatch()
                         controller?.onScreenInteractive(false)
+                        applySuppression()
                     }
 
                     Intent.ACTION_SCREEN_ON -> {
                         screenInteractive = true
                         controller?.onScreenInteractive(true)
+                        // 亮屏 ≠ 解锁：很多 ROM 亮屏后停在锁屏界面。
+                        refreshLockState()
                         if (prefs.load().hideOnShade) {
                             evaluateShade(force = true)
                             startShadeWatch()
                         }
+                    }
+
+                    Intent.ACTION_USER_PRESENT -> {
+                        // 用户真正解锁（指纹 / 密码 / 直接滑开）才会收到这个广播
+                        locked = false
+                        applySuppression()
                     }
                 }
             }
@@ -672,6 +721,9 @@ class HomeBarAccessibilityService : AccessibilityService() {
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
+            // 解锁广播。注意它在 Android 上没有对应的 manifest 常量保护问题，
+            // 但必须在代码里动态注册才能收到。
+            addAction(Intent.ACTION_USER_PRESENT)
         }
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
