@@ -275,10 +275,12 @@ class HomeBarAccessibilityService : AccessibilityService() {
             // 触摸的瞬间先核一次窗口状态：下拉通知栏的那一下本身也是一次触摸，
             // 不先核就会「先弹出来再收回去」，视觉上闪一下。
             p.onTouchWithCoords = { x, y ->
+                if (locked) runCatching { refreshLockState() }
                 evaluateShade(force = true)
                 controller?.onUserTouch(x, y)
             }
             p.onTouchWithoutCoords = {
+                if (locked) runCatching { refreshLockState() }
                 evaluateShade(force = true)
                 controller?.onTouchWithoutCoordinates()
             }
@@ -327,6 +329,9 @@ class HomeBarAccessibilityService : AccessibilityService() {
                         // 「离开桌面」，收起面板后桌面隐藏就失效了。
                         runCatching { requestShadeChecks() }
                     } else {
+                        // 有应用窗口起来了，说明人已经在用手机 —— 顺手核一次锁屏态。
+                        // 这是「解锁广播收不到」的第二道兜底：解锁后必然有窗口变化。
+                        if (locked) runCatching { refreshLockState() }
                         runCatching { updateHomeState(pkg) }
                     }
                 }
@@ -342,6 +347,8 @@ class HomeBarAccessibilityService : AccessibilityService() {
             when (e.eventType) {
                 AccessibilityEvent.TYPE_TOUCH_INTERACTION_START -> {
                     TouchDiagnostics.onEventTouch()
+                    // 手指一碰，先核锁屏态：解锁后第一次触摸就能立刻把条叫回来
+                    if (locked) runCatching { refreshLockState() }
                     // 没有坐标，只知道「有手指按下了」
                     evaluateShade(force = true)
                     c.onTouchWithoutCoordinates()
@@ -552,6 +559,13 @@ class HomeBarAccessibilityService : AccessibilityService() {
                 (cfg.hideOnShade && shadeExpanded) ||
                 (cfg.hideOnLockScreen && locked)
         controller?.setSuppressed(shouldHide)
+
+        // 锁屏期间开着看门狗，解锁后立刻停
+        if (cfg.hideOnLockScreen && locked && screenInteractive) {
+            startLockWatch()
+        } else {
+            stopLockWatch()
+        }
     }
 
     /**
@@ -563,6 +577,26 @@ class HomeBarAccessibilityService : AccessibilityService() {
     private fun refreshLockState() {
         locked = runCatching { keyguard?.isKeyguardLocked == true }.getOrDefault(locked)
         applySuppression()
+    }
+
+    /**
+     * 锁屏看门狗。
+     *
+     * v1.7.0 只靠 ACTION_USER_PRESENT 判断解锁，结果在收不到这个广播的机型上
+     * locked 永远停在 true，条再也回不来。所以锁屏期间每 400ms 主动问一次系统，
+     * 一旦解锁立刻停 —— 只在锁屏且亮屏时跑，成本可以忽略。
+     */
+    private val lockWatchRunnable = Runnable { refreshLockState() }
+
+    private fun startLockWatch() {
+        handler.removeCallbacks(lockWatchRunnable)
+        if (locked && screenInteractive) {
+            handler.postDelayed(lockWatchRunnable, LOCK_WATCH_MS)
+        }
+    }
+
+    private fun stopLockWatch() {
+        handler.removeCallbacks(lockWatchRunnable)
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -727,7 +761,12 @@ class HomeBarAccessibilityService : AccessibilityService() {
         }
         runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+                // 这里用 EXPORTED 而不是 NOT_EXPORTED 是有意的：
+                // 这三个都是【受保护广播】，只有系统能发，第三方应用发不出去，
+                // 所以放开导出不会带来伪造风险。反过来，NOT_EXPORTED 在部分
+                // ROM / Android 14 上会漏掉 ACTION_USER_PRESENT，
+                // 结果就是「解锁了但条一直不回来」。
+                registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
             } else {
                 @Suppress("UnspecifiedRegisterReceiverFlag")
                 registerReceiver(receiver, filter)
@@ -743,6 +782,12 @@ class HomeBarAccessibilityService : AccessibilityService() {
 
         /** 进入桌面的确认延迟，用来吃掉回桌面途中的中间窗口事件 */
         private const val HOME_CONFIRM_MS = 120L
+
+        /**
+         * 锁屏看门狗的轮询间隔。
+         * 只在「已锁屏 + 屏幕亮着」时运行，解锁即停，所以 400ms 的成本可以忽略。
+         */
+        private const val LOCK_WATCH_MS = 400L
 
         /** A. 铺满屏幕的系统面板：宽度 / 高度占屏幕比例下限 */
         private const val SHADE_FULL_WIDTH_RATIO = 0.80f

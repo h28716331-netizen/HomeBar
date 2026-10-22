@@ -227,6 +227,17 @@ Many ROMs wake to the keyguard and sit there, screen lit, waiting for a fingerpr
 `isKeyguardLocked()` needs no permission, shows no consent dialog, and reveals nothing
 beyond "is the keyguard covering the screen right now".
 
+Because `ACTION_USER_PRESENT` is not delivered on every ROM — v1.7.0 relied on it alone
+and could leave the bar hidden forever after one unlock — there are three fallbacks:
+
+| Trigger | Why |
+|---|---|
+| 400 ms watchdog while locked and the screen is on | Catches the unlock even if no broadcast arrives |
+| Any `TYPE_WINDOW_STATE_CHANGED` from a non-SystemUI app | Unlocking always produces a window change |
+| Any touch | First touch after unlocking re-evaluates immediately |
+
+The watchdog stops the instant the bar is un-suppressed, so it costs nothing in normal use.
+
 ### Deliberately avoided
 
 
