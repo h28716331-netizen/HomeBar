@@ -6,6 +6,10 @@
 [![targetSdk](https://img.shields.io/badge/targetSdk-36-blue)](#requirements)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.x-7F52FF?logo=kotlin&logoColor=white)](#requirements)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Download APK](https://img.shields.io/badge/%E2%AC%87%20download-APK%2024%20MB-2ea44f?logo=android&logoColor=white)](https://github.com/h28716331-netizen/HomeBar/releases/latest)
+
+**[Download the APK](https://github.com/h28716331-netizen/HomeBar/releases/latest)** · no Android Studio needed,
+sideload and enable the accessibility service.
 
 HomeBar draws a single rounded bar near the bottom of the screen and nothing else.
 It does **not** replace the navigation bar, intercept gestures, hook the input pipeline,

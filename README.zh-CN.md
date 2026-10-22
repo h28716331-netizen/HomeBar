@@ -3,6 +3,11 @@
 给 Android 16（targetSdk 36 / minSdk 30）用的 iOS 风格底部指示条。
 **只叠加一根条，不改系统任何动画与手势。**
 
+**[⬇ 直接下载 APK](https://github.com/h28716331-netizen/HomeBar/releases/latest)** ·
+不用装 Android Studio，装上后在无障碍里开启服务即可。
+
+英文说明：[README.md](README.md)
+
 ---
 
 ## ⚠️ 先看这段：1.0.0 出了什么事故
